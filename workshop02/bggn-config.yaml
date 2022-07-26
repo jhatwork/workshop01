@@ -1,0 +1,20 @@
+# Create namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata: 
+  name: bggns
+  labels:
+    name: bggns
+# Create secret
+---
+apiVersion: v1
+kind: Secret
+metadata: 
+  name: dbpwd-secret
+  namespace: bggns
+  labels:
+    name: dbpwd-secret
+type: Opaque
+data:
+  BGG_DB_PASSWORD: Y2hhbmdlaXQ=
