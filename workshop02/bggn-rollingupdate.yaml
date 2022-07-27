@@ -1,0 +1,46 @@
+# Rolling update to v2
+---
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+  name: bggapp-deploy
+  namespace: bggns
+  labels:
+    name: bggapp-deploy
+spec:
+  replicas: 3
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      name: bggapp-po
+  template: 
+    metadata:
+      name: bggapp-po
+      namespace: bggns
+      labels:
+        name: bggapp-po
+    spec:
+      containers:
+      - name: bggapp-po
+        image: stackupiss/bgg-backend:v2
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: dbconn-cfgmap
+        - secretRef:
+            name: dbpwd-secret
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
