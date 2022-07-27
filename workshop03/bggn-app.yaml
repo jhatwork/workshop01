@@ -41,6 +41,10 @@ spec:
           httpGet:
             path: /v1/healthz
             port: 3000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
 ---
 apiVersion: apps/v1 
 kind: Deployment 
@@ -83,6 +87,10 @@ spec:
           httpGet:
             path: /v2/healthz
             port: 3000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
 # Create service for apps
 ---
 apiVersion: v1
@@ -143,3 +151,49 @@ spec:
             name: bggappv2-svc
             port:
               number: 3000
+# Add Horizontal pod autoscaler
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bggv1-hpa
+  namespace: bggns
+  labels: 
+    name: bggv1-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bggappv1-deploy
+  minReplicas: 1
+  maxReplicas: 4
+  metrics: 
+  - type: Resource
+    resource: 
+      name: memory
+      target: 
+        type: Utilization
+        averageUtilization: 70
+# Add Horizontal pod autoscaler
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bggv2-hpa
+  namespace: bggns
+  labels: 
+    name: bggv2-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bggappv2-deploy
+  minReplicas: 1
+  maxReplicas: 4
+  metrics: 
+  - type: Resource
+    resource: 
+      name: memory
+      target: 
+        type: Utilization
+        averageUtilization: 70
