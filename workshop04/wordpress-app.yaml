@@ -1,0 +1,104 @@
+# Create namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata: 
+  name: wpns
+  labels: 
+    name: wpns
+# Create persistent volume claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: wpapp-pvc
+  namespace: wpns
+  labels:
+    name : wpapp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage
+# Create deployment with application pods
+---
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+  name: wpapp-deploy
+  namespace: wpns
+  labels:
+    name: wpapp-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: wpapp-po
+  template: 
+    metadata:
+      name: wpapp-po
+      namespace: wpns
+      labels:
+        name: wpapp-po
+    spec:
+      volumes:
+        - name: wpapp-vol
+          persistentVolumeClaim:
+            claimName: wpapp-pvc
+      containers:
+      - name: wpapp
+        image: wordpress
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: wpdbconn-cfgmap
+        - secretRef:
+            name: wpdbpwd-secret
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: wpapp-vol
+            mountPath: /var/www/html
+# Create service for apps
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: wpapp-svc
+  namespace: wpns
+  labels:
+    name: wpapp-svc
+spec:
+  type: ClusterIP
+  selector:
+    name: wpapp-po
+  ports:
+    - port: 8080
+      targetPort: 80
+# Create Ingress rules
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wp-ing
+  namespace: wpns
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-rpm: "300"
+  labels:
+    name: wp-ing
+spec: 
+  ingressClassName: nginx
+  rules:
+  - host: wp-139.59.192.44.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: wpapp-svc
+            port:
+              number: 8080

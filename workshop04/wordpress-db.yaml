@@ -1,0 +1,72 @@
+# Create persistent volume claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: wp-db-pvc
+  namespace: wpns
+  labels:
+    name: wp-db-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage
+# Create deployment with database pod
+---
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+  name: wpdb-deploy
+  namespace: wpns
+  labels:
+    name: wpdb-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: wpdb-po
+  template: 
+    metadata:
+      name: wpdb-po
+      namespace: wpns
+      labels:
+        name: wpdb-po
+    spec:
+      volumes:
+        - name: wpdb-vol
+          persistentVolumeClaim:
+            claimName: wp-db-pvc
+      containers:
+      - name: wpdb
+        image: mysql:5.7
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: wpdbconn-cfgmap
+        - secretRef:
+            name: wpdbpwd-secret
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+          - name: wpdb-vol
+            mountPath: /var/lib/mysql
+            subPath: mysql
+# Create service for DB
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: wpdb-svc
+  namespace: wpns
+  labels:
+    name: wpdb-svc
+spec:
+  type: ClusterIP
+  selector:
+    name: wpdb-po
+  ports:
+    - port: 3306
+      targetPort: 3306

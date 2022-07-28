@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1 
+kind: Kustomization 
+
+resources:
+- wordpress-app.yaml
+- wordpress-db.yaml
+- netpol.yaml
+
+namePrefix: delta-
+namespace: delta
+
+configMapGenerator:
+- name: wpdbconn-cfgmap
+  literals:
+  - WORDPRESS_DB_USER=wordpress # both usernames should match
+  - MYSQL_USER=wordpress
+  - WORDPRESS_DB_HOST=delta-wpdb-svc # need to manually replace this
+  - WORDPRESS_DB_NAME=wpdb # both database names should match
+  - MYSQL_DATABASE=wpdb
+  
+secretGenerator:
+- name: wpdbpwd-secret
+  literals:
+  - WORDPRESS_DB_PASSWORD=changeit # both passwords should match
+  - MYSQL_PASSWORD=changeit
+  - MYSQL_ROOT_PASSWORD=changeit # root password is mandatory
+  
+patches:
+- path: ./patch.yaml # manually edit this file to patch host name for ingress
+  target:
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
+    name: wp-ing
